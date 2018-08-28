@@ -16,35 +16,14 @@
  */
 package org.apache.camel.examples;
 
-import java.util.Objects;
-import org.apache.camel.CamelContext;
-import org.apache.camel.CamelContextAware;
 import org.apache.camel.Exchange;
 import org.apache.camel.processor.aggregate.AggregationStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.InitializingBean;
 
-public class RequestReplyAggregationStrategy implements AggregationStrategy, CamelContextAware, InitializingBean {
+public class RequestReplyAggregationStrategy implements AggregationStrategy {
 
   private static final Logger log = LoggerFactory.getLogger(RequestReplyAggregationStrategy.class);
-
-  private CamelContext camelContext;
-
-  @Override
-  public void setCamelContext(CamelContext camelContext) {
-    this.camelContext = camelContext;
-  }
-
-  @Override
-  public CamelContext getCamelContext() {
-    return camelContext;
-  }
-
-  @Override
-  public void afterPropertiesSet() throws Exception {
-    Objects.requireNonNull(camelContext, "The camelContext property must not be null.");
-  }
 
   @Override
   public Exchange aggregate(Exchange oldExchange, Exchange newExchange) {
