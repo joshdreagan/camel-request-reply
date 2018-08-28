@@ -51,11 +51,7 @@ public class RequestReplyAggregationStrategy implements AggregationStrategy, Cam
     if (oldExchange == null) {
       return newExchange;
     } else {
-      String callbackUrl = oldExchange.getIn().getHeader("CallbackURL", String.class);
-      String message = oldExchange.getIn().getBody(String.class);
-      String confirmationNumber = newExchange.getIn().getBody(String.class);
-      oldExchange.setProperty("CallbackURL", callbackUrl);
-      oldExchange.getIn().setBody(String.format("Transaction Details:\n\tConfirmation Number: %s\n\tMessage: %s\n", confirmationNumber, message));
+      oldExchange.getIn().setBody(String.format("{\n\t\"request\":\"%s\",\n\t\"response\":\"%s\"\n}\n", oldExchange.getIn().getBody(String.class), newExchange.getIn().getBody(String.class)));
       return oldExchange;
     }
   }

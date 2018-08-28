@@ -20,10 +20,6 @@ limitations under the License.
   
   <bean id="uuid" class="java.util.UUID" factory-method="randomUUID" scope="prototype"/>
   
-  <bean id="pooledJmsConnectionFactory" class="org.apache.activemq.jms.pool.PooledConnectionFactory">
-    <property name="connectionFactory" ref="jmsConnectionFactory"/>
-  </bean>
-  
   <bean id="jmsConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
     <property name="brokerURL" value="tcp://localhost:61616"/>
     <property name="userName" value="admin"/>
@@ -34,34 +30,18 @@ limitations under the License.
   
   <bean id="requestReplyAggregationStrategy" class="org.apache.camel.examples.RequestReplyAggregationStrategy"/>
   
-  <camelContext xmlns="http://camel.apache.org/schema/spring">
+  <camelContext id="camelContext" xmlns="http://camel.apache.org/schema/spring">
     
-    <restConfiguration component="jetty"
-                       host="0.0.0.0"
-                       port="8080" 
-                       contextPath="/camel"/>
-    <rest path="/messages">
-      <post uri="/"
-            consumes="text/plain"
-            produces="text/plain">
-        <to uri="direct:handleClientRequest"/>
-      </post>
-    </rest>
-    
-    <route id="handleClientRequest">
-      <from uri="direct:handleClientRequest"/>
+    <route id="filePollerRoute">
+      <from uri="file:target/input?delete=true"/>
       <convertBodyTo type="java.lang.String"/>
-      <log logName="org.apache.camel.examples" loggingLevel="INFO" message="Received message: [${body}]"/>
       <setHeader headerName="JMSCorrelationID">
         <simple>${ref:uuid}</simple>
       </setHeader>
+      <removeHeaders pattern=".*" excludePattern="JMSCorrelationID"/>
+      <log logName="org.apache.camel.examples" loggingLevel="INFO" message="Sending message: correlationId=[${header.JMSCorrelationID}], body=[${body}]"/>
       <to uri="direct:aggregateRequestReply" pattern="InOnly"/>
-      <removeHeaders pattern=".*" excludePattern="JMS.*"/>
-      <to uri="jms:queue:messages?connectionFactory=#pooledJmsConnectionFactory&amp;replyTo=messagesCallback&amp;replyToType=Shared&amp;preserveMessageQos=true" pattern="InOnly"/>
-      <removeHeaders pattern=".*"/>
-      <setBody>
-        <simple>${null}</simple>
-      </setBody>
+      <to uri="jms:queue:messages?connectionFactory=#jmsConnectionFactory&amp;replyTo=messagesCallback&amp;replyToType=Shared&amp;preserveMessageQos=true" pattern="InOnly"/>
     </route>
     
     <route id="aggregateRequestReplyRoute">
@@ -75,17 +55,17 @@ limitations under the License.
         <completionSize>
           <constant>2</constant>
         </completionSize>
-        <removeHeaders pattern=".*" excludePattern="CorrelationID"/>
-        <routingSlip>
-          <simple>jetty:${exchangeProperty[CallbackURL]}</simple>
-        </routingSlip>
+        <setHeader headerName="CamelFileName">
+          <simple>${header.JMSCorrelationID}.txt</simple>
+        </setHeader>
+        <to id="fileOutputEndpoint" uri="file:target/output"/>
       </aggregate>
     </route>
     
     <route id="handleBackendResponse">
-      <from uri="jms:queue:messagesCallback?connectionFactory=#pooledJmsConnectionFactory&amp;acknowledgementModeName=CLIENT_ACKNOWLEDGE&amp;disableReplyTo=true"/>
+      <from uri="jms:queue:messagesCallback?connectionFactory=#jmsConnectionFactory&amp;acknowledgementModeName=CLIENT_ACKNOWLEDGE&amp;disableReplyTo=true"/>
       <convertBodyTo type="java.lang.String"/>
-      <log logName="org.apache.camel.examples" loggingLevel="INFO" message="Received message response: [${body}]"/>
+      <log logName="org.apache.camel.examples" loggingLevel="INFO" message="Received message response: correlationId=[$header.JMSCorrelationID], body=[${body}]"/>
       <to uri="direct:aggregateRequestReply" pattern="InOnly"/>
     </route>
     
