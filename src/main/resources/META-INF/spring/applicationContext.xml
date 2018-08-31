@@ -65,7 +65,7 @@ limitations under the License.
     <route id="handleBackendResponse">
       <from uri="jms:queue:messagesCallback?connectionFactory=#jmsConnectionFactory&amp;acknowledgementModeName=CLIENT_ACKNOWLEDGE&amp;disableReplyTo=true"/>
       <convertBodyTo type="java.lang.String"/>
-      <log logName="org.apache.camel.examples" loggingLevel="INFO" message="Received message response: correlationId=[$header.JMSCorrelationID], body=[${body}]"/>
+      <log logName="org.apache.camel.examples" loggingLevel="INFO" message="Received message response: correlationId=[${header.JMSCorrelationID}], body=[${body}]"/>
       <to uri="direct:aggregateRequestReply" pattern="InOnly"/>
     </route>
     
